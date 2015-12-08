@@ -1,15 +1,10 @@
 var bdp = require('..'),
-    stream = require('stream');
+    stream = require('stream'),
+    path = require('path');
 
 var config = {
     levels: [
-        'project-stub/libs/bem-core/common.blocks',
-        'project-stub/libs/bem-core/desktop.blocks',
-        'project-stub/libs/bem-components/common.blocks',
-        'project-stub/libs/bem-components/desktop.blocks',
-        'project-stub/libs/bem-components/design/common.blocks',
-        'project-stub/libs/bem-components/design/desktop.blocks',
-        'project-stub/common.blocks'
+        path.join(__dirname, 'fixtures/test1/level1')
     ],
     options: {}
 };

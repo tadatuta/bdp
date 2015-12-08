@@ -3,6 +3,7 @@ var fs = require('fs'),
     stream = require('stream'),
     naming = require('bem-naming'),
     walk = require('bem-walk'),
+    _ = require('lodash'),
     depsNormalize = require('deps-normalize');
 
 /**
@@ -13,12 +14,12 @@ function reader(file, cb) {
     fs.readFile(file.path, function(err, depsText) {
         if (err) return cb(err);
 
-        var parsedDeps = eval(depsText.toString());
+        var parsed  ps = eval(depsText.toString());
 
         Array.isArray(parsedDeps) || (parsedDeps = [parsedDeps]);
 
         cb(null, parsedDeps.map(function(dep) {
-            ['mustDeps', 'shouldDeps'].forEach(function(depsType) {
+            ['mustDeps', 'shouldDeps', 'noDeps'].forEach(function(depsType) {
                 dep[depsType] = depsNormalize(dep[depsType]);
             });
 
@@ -47,18 +48,19 @@ function read(config, reader) {
         var name = naming.stringify(file.entity);
 
         deps[name] ?
-            deps[name].push(file) :
-            deps[name] = [file];
+            deps[name].files.push(file) :
+            deps[name] = {
+                files: [file],
+                techs: {}
+            };
     });
 
     walker.on('end', function() {
         Object.keys(deps).forEach(function(name) {
-            var files = deps[name],
+            var files = deps[name].files,
                 totalEntityFiles = files.length;
 
             files.forEach(function(file) {
-                file.deps = [];
-
                 reader(file, function(err, depsFile) {
                     if (err) {
                         output.emit('error', err);
@@ -69,20 +71,31 @@ function read(config, reader) {
                     totalDepsFiles--;
                     totalEntityFiles--;
 
-                    file.deps.push(depsFile);
+                    depsFile.forEach(function(oneTechDeps) {
+                        var techs = deps[name].techs,
+                            techName = oneTechDeps.tech || '';
 
-                    totalEntityFiles || output.push({
-                        entity: file.entity,
-                        deps: file.deps
+                        techs[techName] || (techs[techName] = []);
+                        techs[techName].push([oneTechDeps]);
                     });
+
+                    if (!totalEntityFiles) {
+                        Object.keys(deps[name].techs).forEach(function(techName) {
+                            output.push({
+                                entity: file.entity,
+                                tech: techName,
+                                deps: deps[name].techs[techName]
+                            });
+                        });
+
+                        output.push(null);
+                    }
                 });
             });
         });
     });
 
-    output._read = function () {
-        isInited && !totalDepsFiles && output.push(null);
-    };
+    output._read = function () {};
 
     return output;
 }
@@ -135,18 +148,28 @@ function parser(entityDeps) {
 
             isMust && (dependency.order = 'dependenceBeforeDependants');
 
-            result.dependOn.push(dependency);
+            _.some(result.dependOn, dependency) || result.dependOn.push(dependency);
+        });
+    }
+
+    function remove(noDeps) {
+        noDeps.forEach(function(noDep) {
+            result.dependOn.forEach(function(dep, idx) {
+                if ((naming.stringify(dep.entity) + dep.tech) === (naming.stringify(noDep) + noDep.tech)) {
+                    result.dependOn.splice(idx, 1);
+                }
+            });
         });
     }
 
     // `entityDeps.deps` is an array of all entity dependencies from all files
     entityDeps.deps.forEach(function(entityOneFileDeps) {
         entityOneFileDeps.forEach(function(oneTechDeps) {
-            result.tech = oneTechDeps.tech;
+            oneTechDeps.tech && (result.tech = oneTechDeps.tech);
 
             add(oneTechDeps.mustDeps, true);
             add(oneTechDeps.shouldDeps);
-            // TODO: noDeps
+            remove(oneTechDeps.noDeps);
         });
     });
 
