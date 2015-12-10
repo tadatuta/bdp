@@ -79,7 +79,7 @@ function read(config, reader) {
                         techs[techName].push([oneTechDeps]);
                     });
 
-                    if (!totalEntityFiles) {
+                    if (!totalDepsFiles && !totalEntityFiles) {
                         Object.keys(deps[name].techs).forEach(function(techName) {
                             output.push({
                                 entity: file.entity,
