@@ -14,7 +14,7 @@ function reader(file, cb) {
     fs.readFile(file.path, function(err, depsText) {
         if (err) return cb(err);
 
-        var parsed  ps = eval(depsText.toString());
+        var parsedDeps = eval(depsText.toString());
 
         Array.isArray(parsedDeps) || (parsedDeps = [parsedDeps]);
 
