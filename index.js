@@ -80,13 +80,20 @@ function read(config, reader) {
                     });
 
                     if (!totalDepsFiles && !totalEntityFiles) {
-                        Object.keys(deps[name].techs).forEach(function(techName) {
-                            output.push({
-                                entity: file.entity,
-                                tech: techName,
-                                deps: deps[name].techs[techName]
+                            Object.keys(deps).forEach(function(name) {
+                                var techs = deps[name].techs;
+                                Object.keys(techs).forEach(function(techName) {
+                                    techs[techName].forEach(function(item) {
+                                        item.forEach(function(i) {
+                                            output.push({
+                                                entity: file.entity,
+                                                tech: techName,
+                                                deps: deps[name].techs[techName]
+                                            });
+                                        });
+                                    });
+                                });
                             });
-                        });
 
                         output.push(null);
                     }
