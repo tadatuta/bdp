@@ -1,5 +1,4 @@
 var fs = require('fs'),
-    util = require('util'),
     stream = require('stream'),
     naming = require('bem-naming'),
     walk = require('bem-walk'),
@@ -23,8 +22,11 @@ function reader(file, cb) {
                 dep[depsType] = depsNormalize(dep[depsType]);
             });
 
-            // add entity info to dep item
-            return util._extend(JSON.parse(JSON.stringify(file.entity)), dep);
+            ['block', 'elem', 'modName', 'modVal'].forEach(function(field) {
+                if (!dep[field] && file.entity[field]) dep[field] = file.entity[field];
+            });
+
+            return dep;
         }));
     });
 }
@@ -80,20 +82,29 @@ function read(config, reader) {
                     });
 
                     if (!totalDepsFiles && !totalEntityFiles) {
-                            Object.keys(deps).forEach(function(name) {
-                                var techs = deps[name].techs;
-                                Object.keys(techs).forEach(function(techName) {
-                                    techs[techName].forEach(function(item) {
-                                        item.forEach(function(i) {
-                                            output.push({
-                                                entity: file.entity,
-                                                tech: techName,
-                                                deps: deps[name].techs[techName]
-                                            });
+                        Object.keys(deps).forEach(function(name) {
+                            var techs = deps[name].techs;
+
+                            Object.keys(techs).forEach(function(techName) {
+                                techs[techName].forEach(function(depsByTech) {
+                                    depsByTech.forEach(function(dep) {
+                                        var entity = {
+                                            block: dep.block
+                                        };
+
+                                        dep.elem && (entity.elem = dep.elem);
+                                        dep.modName && (entity.modName = dep.modName);
+                                        dep.modVal && (entity.modVal = dep.modVal);
+
+                                        output.push({
+                                            entity: entity,
+                                            tech: techName,
+                                            deps: techs[techName]
                                         });
                                     });
                                 });
                             });
+                        });
 
                         output.push(null);
                     }
