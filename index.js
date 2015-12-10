@@ -19,6 +19,8 @@ function reader(file, cb) {
 
         cb(null, parsedDeps.map(function(dep) {
             ['mustDeps', 'shouldDeps', 'noDeps'].forEach(function(depsType) {
+                dep[depsType] || (dep[depsType] = {});
+                dep[depsType].block || (dep[depsType].block = file.entity.block);
                 dep[depsType] = depsNormalize(dep[depsType]);
             });
 
